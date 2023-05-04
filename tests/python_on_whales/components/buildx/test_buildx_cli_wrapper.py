@@ -286,8 +286,7 @@ def test_buildx_build_build_context1(tmp_path):
             "test_context"
         ),
         # Test with git repo
-        # https://github.com/gabrieldemarmiesse/python-on-whales.git#:tests/python_on_whales/components/buildx/test_context",
-        "https://github.com/bigcat2014/python-on-whales.git#439-no-support-for-buildx-build-build-context:tests/python_on_whales/components/buildx/test_context",
+        "https://github.com/gabrieldemarmiesse/python-on-whales.git#master:tests/python_on_whales/components/buildx/test_context",
     ],
 )
 def test_buildx_build_build_context2(tmp_path, test_context):
@@ -299,17 +298,14 @@ def test_buildx_build_build_context2(tmp_path, test_context):
 
 
 # Test with tar file
-# "https://github.com/gabrieldemarmiesse/python-on-whales/raw/master/tests/python_on_whales/components/buildx/test_context/test_context.tar.gz",
 @pytest.mark.usefixtures("with_container_driver")
 def test_buildx_build_build_context3(tmp_path):
     (tmp_path / "Dockerfile").write_text(dockerfile_content3)
     docker.buildx.build(
         tmp_path,
         build_contexts=dict(
-            test_context="https://github.com/bigcat2014/python-on-whales/raw/439_testing/tests/python_on_whales/components/buildx/test_context/test_context.tar.gz"
-        ),
-        load=True,
-        tags="test_buildx_build_build_context3"
+            test_context="https://github.com/gabrieldemarmiesse/python-on-whales/raw/master/tests/python_on_whales/components/buildx/test_context/test_context.tar.gz"
+        )
     )
 
 
