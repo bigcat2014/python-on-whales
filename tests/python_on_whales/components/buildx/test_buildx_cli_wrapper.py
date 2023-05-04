@@ -15,7 +15,13 @@ RUN touch /dada
 
 dockerfile_content2 = """
 FROM busybox
-COPY --from=test_context test_file.txt /test_file.txt
+ARG local_file_path=test_file.txt
+COPY --from=test_context ./* /test
+"""
+
+dockerfile_content3 = """
+FROM test_context
+RUN touch /dada
 """
 
 
@@ -261,25 +267,61 @@ def test_buildx_build_attestations(tmp_path, kwargs):
 @pytest.mark.usefixtures("with_container_driver")
 def test_buildx_build_build_context1(tmp_path):
     (tmp_path / "Dockerfile").write_text(dockerfile_content1)
-    docker.buildx.build(tmp_path, build_contexts=dict(test_context=tmp_path))
+    docker.buildx.build(tmp_path, build_contexts=dict(test_context="."))
 
 
 # Does the build work when passing extra contexts
 # when the Dockerfile does make use of them
 @pytest.mark.usefixtures("with_container_driver")
-def test_buildx_build_build_context2(tmp_path):
+@pytest.mark.parametrize(
+    "test_context,local_file_path",
+    [
+        # Test with local directory
+        (
+            os.path.join(
+                os.path.dirname(__file__),
+                "test_context"
+            ),
+            "test_file.txt"
+        ),
+        # Test with git repo
+        (
+            # https://github.com/gabrieldemarmiesse/python-on-whales.git#:tests/python_on_whales/components/buildx/test_context",
+            "https://github.com/bigcat2014/python-on-whales.git#439-no-support-for-buildx-build-build-context:tests/python_on_whales/components/buildx/test_context",
+            "test_file.txt"
+        ),
+        # Test with tar file
+        (
+            "https://",
+            "test_file.txt"
+        )
+    ],
+)
+def test_buildx_build_build_context2(tmp_path, test_context, local_file_path):
     (tmp_path / "Dockerfile").write_text(dockerfile_content2)
-    test_context = os.path.join(
-        os.path.dirname(__file__),
-        "test_context"
+    docker.buildx.build(
+        tmp_path,
+        build_args=dict(local_file_path=local_file_path),
+        build_contexts=dict(test_context=test_context)
     )
-    docker.buildx.build(tmp_path, build_contexts=dict(test_context=test_context))
+
+
+# Test with the docker-image:// spec
+# https://github.com/docker-library/busybox/raw/c4c1b1f404daebc67a32c5949d5d5b3af3b14302/latest/glibc/busybox.tar.xz
+@pytest.mark.usefixtures("with_container_driver")
+
+def test_buildx_build_build_context3(tmp_path, test_context):
+    (tmp_path / "Dockerfile").write_text(dockerfile_content3)
+    docker.buildx.build(
+        tmp_path,
+        build_contexts=dict(test_context="docker-image://busybox:1.36.0"),
+    )
 
 
 # Does the build fail when NOT passing extra contexts
 # when the dockerfile does make use of them
 @pytest.mark.usefixtures("with_container_driver")
-def test_buildx_build_build_context3(tmp_path):
+def test_buildx_build_build_context4(tmp_path):
     (tmp_path / "Dockerfile").write_text(dockerfile_content2)
     with pytest.raises(DockerException):
         docker.buildx.build(tmp_path)
